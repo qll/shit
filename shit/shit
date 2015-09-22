@@ -1,0 +1,31 @@
+#!/usr/bin/env python3
+"""Stego Helper Identification Tool - Analyse and create steganographic images
+"""
+import argparse
+import sys
+
+
+def analyse(input, method='histogram'):
+    pass
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description=__doc__.split('\n')[0])
+    subparsers = parser.add_subparsers(dest='command', title='commands')
+
+    a_parser = subparsers.add_parser('analyse', help='Analyse an image')
+    a_parser.add_argument('input', metavar='IMAGE', type=str,
+                          help='Image to be analysed')
+    a_parser.add_argument('-m', '--method', help='Analysis method',
+                          choices=('histogram',))
+
+    args = vars(parser.parse_args())
+    if args['command'] is None:
+        print('You have to specify a command, try --help')
+        sys.exit(1)
+
+    # call command by name
+    command = args.pop('command')
+    if command not in globals():
+        raise NotImplementedError('This command is not implemented, yet.')
+    globals()[command](**args)
