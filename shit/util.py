@@ -1,19 +1,20 @@
 import argparse
-import logging as log
+import log
+import numpy as np
 import os
-
-
-def configure_logging():
-    log.basicConfig(level=log.DEBUG, format='[%(levelname)s] %(message)s')
 
 
 def parse_args(title, methods):
     """Create command line interface from data structure given in methods."""
     parser = argparse.ArgumentParser(description=title)
-    sparser = parser.add_subparsers(title='methods', dest='method')
+    parser.add_argument('-v', '--verbose', help='Verbose output',
+                        action='store_true', default=False)
+    sparser = parser.add_subparsers(title='methods')
     for method, data in methods.items():
         arguments = data.pop('arguments')
-        subparser = sparser.add_parser(method, **data)
+        function = data.pop('function')
+        subparser = sparser.add_parser(method, help=function.__doc__)
+        subparser.set_defaults(function=function)
         for argument in arguments:
             name_or_flags = ([argument.pop('name')] if 'name' in argument
                                                     else argument.pop('flags'))
@@ -21,25 +22,24 @@ def parse_args(title, methods):
     return vars(parser.parse_args())
 
 
-def call_method(scope, args):
-    """Call method given via command line in a given scope.
-
-    The command line interface is built using a data structure. This implicitly
-    defines which functions are available in a script and which arguments they
-    take.
-    """
-    method = args.pop('method')
-    scope[method](**args)
-
-
-def start(title, methods, scope):
+def start(title, methods):
     """Start the application and handle exceptions."""
-    os.chdir(os.path.dirname(os.path.abspath(__file__)))
-    configure_logging()
     args = parse_args(title, methods)
+    log.initialize(args.pop('verbose'))
     try:
-        call_method(scope, args)
+        function = args.pop('function')
+        log.debug('Starting %s with %s', function.__name__, args)
+        function(**args)
+        log.debug('Execution finish')
     except AssertionError as error:
         log.error(error)
     except Exception as error:
         log.exception(error)
+
+
+def unpack_img_to_bits(img_array):
+    return np.unpackbits(img_array.reshape((img_array.size, 1)), axis=1)
+
+
+def pack_bits_to_img(img_bit_array, img_array):
+    return np.packbits(img_bit_array, axis=1).reshape(img_array.shape)
